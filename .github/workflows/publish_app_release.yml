@@ -90,20 +90,28 @@ jobs:
       contents: write
     env:
       TAG_NAME: ${{ needs.resolve-tag.outputs.tag }}
+      # 将签名相关 secret 映射到 env，方便后续 `if: env.KEYSTORE_BASE64 != ''` 判空。
+      # secret 缺失时这些 env 为空字符串，签名 step 整段跳过，Android 由 gradle 回退至 debug 签名。
+      KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+      STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+      KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
     steps:
       # 签出代码至 resolve-tag 产出的 tag
       - uses: actions/checkout@v4
         with:
           ref: ${{ env.TAG_NAME }}
 
-      #APK签名设置
+      # APK 签名：KEYSTORE_BASE64 secret 存在时才执行；缺失则跳过（产出 debug 签名的 APK）
       - name: Download Android keystore
+        if: env.KEYSTORE_BASE64 != ''
         id: android_keystore
         uses: timheuer/base64-to-file@v1.2
         with:
           fileName: keystore.jks
           encodedString: ${{ secrets.KEYSTORE_BASE64 }}
       - name: Create key.properties
+        if: env.KEYSTORE_BASE64 != ''
         run: |
           echo "storeFile=${{ steps.android_keystore.outputs.filePath }}" > simple_live_app/android/key.properties
           echo "storePassword=${{ secrets.STORE_PASSWORD }}" >> simple_live_app/android/key.properties
@@ -201,7 +209,7 @@ jobs:
       - name: Echo target tag
         run: echo "TAG_NAME=${{ env.TAG_NAME }}"
 
-      #上传至Release
+      #上传至Release（TOKEN 缺失时回退到默认的 GITHUB_TOKEN）
       - name: Upload Release
         uses: softprops/action-gh-release@v1
         with:
@@ -209,7 +217,7 @@ jobs:
           name: ${{ env.TAG_NAME }}
           generate_release_notes: true
           prerelease: ${{ contains(env.TAG_NAME, 'beta') || contains(env.TAG_NAME, 'alpha') }}
-          token: ${{ secrets.TOKEN }}
+          token: ${{ secrets.TOKEN || secrets.GITHUB_TOKEN }}
           files: |
             simple_live_app/build/app/outputs/flutter-apk/app-x86_64-release.apk
             simple_live_app/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
@@ -273,7 +281,7 @@ jobs:
       - name: Echo target tag
         run: echo "TAG_NAME=${{ env.TAG_NAME }}"
 
-      #上传至Release
+      #上传至Release（TOKEN 缺失时回退到默认的 GITHUB_TOKEN）
       - name: Upload Release
         uses: softprops/action-gh-release@v1
         with:
@@ -281,7 +289,7 @@ jobs:
           name: ${{ env.TAG_NAME }}
           generate_release_notes: true
           prerelease: ${{ contains(env.TAG_NAME, 'beta') || contains(env.TAG_NAME, 'alpha') }}
-          token: ${{ secrets.TOKEN }}
+          token: ${{ secrets.TOKEN || secrets.GITHUB_TOKEN }}
           files: |
             simple_live_app/build/dist/*/*.deb
             simple_live_app/build/dist/*/*.zip
@@ -336,7 +344,7 @@ jobs:
         shell: bash
         run: echo "TAG_NAME=${{ env.TAG_NAME }}"
 
-      #上传至Release
+      #上传至Release（TOKEN 缺失时回退到默认的 GITHUB_TOKEN）
       - name: Upload Release
         uses: softprops/action-gh-release@v1
         with:
@@ -344,7 +352,7 @@ jobs:
           name: ${{ env.TAG_NAME }}
           generate_release_notes: true
           prerelease: ${{ contains(env.TAG_NAME, 'beta') || contains(env.TAG_NAME, 'alpha') }}
-          token: ${{ secrets.TOKEN }}
+          token: ${{ secrets.TOKEN || secrets.GITHUB_TOKEN }}
           files: |
             simple_live_app/build/dist/*/*.msix
             simple_live_app/build/dist/*/*.zip
