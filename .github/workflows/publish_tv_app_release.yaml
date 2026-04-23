@@ -1,6 +1,12 @@
-name: app-build-action
-#推送Tag时触发
+name: tv-app-release
+# 推送 tv_* Tag 时自动触发；也可通过 workflow_dispatch 手动指定已有 tag 重跑
 on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Git tag to build & release (must already exist in the repo). e.g. tv_v1.6.5"
+        required: true
+        type: string
   push:
     tags:
       - "tv_*"
@@ -9,11 +15,14 @@ jobs:
     runs-on: macos-latest
     permissions:
       contents: write
+    env:
+      # 同时兼容 tag push 与 workflow_dispatch；github.ref_name 在 tag push 时即 tag 名
+      TAG_NAME: ${{ github.event.inputs.tag || github.ref_name }}
     steps:
-      #签出代码
+      # 签出代码至目标 tag
       - uses: actions/checkout@v4
         with:
-          ref: master
+          ref: ${{ env.TAG_NAME }}
 
       #APK签名设置
       - name: Download Android keystore
@@ -76,10 +85,11 @@ jobs:
       - name: Echo version content
         run: echo "${{ fromJson(steps.version.outputs.content).version_desc }}"
 
-      #上传至Release
+      #上传至Release（release 显示名/正文仍由 JSON 提供，但显式指定 tag_name 保证与 git tag 绑定）
       - name: Upload Release
         uses: softprops/action-gh-release@v1
         with:
+          tag_name: ${{ env.TAG_NAME }}
           name: "${{ fromJson(steps.version.outputs.content).version }}"
           body: "# Android TV \n${{ fromJson(steps.version.outputs.content).version_desc }}"
           prerelease: ${{ fromJson(steps.version.outputs.content).prerelease }}

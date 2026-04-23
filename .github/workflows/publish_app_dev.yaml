@@ -1,7 +1,13 @@
-name: app-build-action-dev
-
+name: app-dev
+# 推送 dev_v* Tag 时自动触发；也可通过 workflow_dispatch 手动指定 tag/分支 重跑
 on:
   workflow_dispatch:
+    inputs:
+      ref:
+        description: "Git ref to checkout (tag name, branch name or commit SHA). Leave empty to use the default branch."
+        required: false
+        type: string
+        default: ""
   push:
     tags:
       - "dev_v*"
@@ -14,11 +20,15 @@ jobs:
     permissions:
       contents: write
 
+    env:
+      # tag push 时 github.ref_name 是 tag 名；workflow_dispatch 时读 inputs.ref，为空则退回当前触发 ref
+      CHECKOUT_REF: ${{ github.event.inputs.ref || github.ref_name }}
+
     steps:
-      # 签出代码
+      # 签出代码至指定 ref
       - uses: actions/checkout@v4
         with:
-          ref: dev
+          ref: ${{ env.CHECKOUT_REF }}
 
       # APK签名设置
       - name: Download Android keystore
@@ -128,11 +138,13 @@ jobs:
     runs-on: ubuntu-22.04
     permissions:
       contents: write
+    env:
+      CHECKOUT_REF: ${{ github.event.inputs.ref || github.ref_name }}
     steps:
-      # 签出代码
+      # 签出代码至指定 ref
       - uses: actions/checkout@v4
         with:
-          ref: dev
+          ref: ${{ env.CHECKOUT_REF }}
       # 设置Flutter环境
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -177,11 +189,13 @@ jobs:
     runs-on: windows-latest
     permissions:
       contents: write
+    env:
+      CHECKOUT_REF: ${{ github.event.inputs.ref || github.ref_name }}
     steps:
-      # 签出代码
+      # 签出代码至指定 ref
       - uses: actions/checkout@v4
         with:
-          ref: dev
+          ref: ${{ env.CHECKOUT_REF }}
       # 设置Flutter环境
       - name: Setup Flutter
         uses: subosito/flutter-action@v2

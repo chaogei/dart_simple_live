@@ -1,6 +1,12 @@
-name: app-build-action
-#推送Tag时触发
+name: app-release
+# 推送 v* Tag 时自动触发；也可通过 workflow_dispatch 手动指定已有 tag 重跑
 on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Git tag to build & release (must already exist in the repo). e.g. v1.11.4"
+        required: true
+        type: string
   push:
     tags:
       - "v*"
@@ -9,9 +15,14 @@ jobs:
     runs-on: macos-latest
     permissions:
       contents: write
+    env:
+      # 同时兼容 tag push（github.ref_name 即 tag 名）与 workflow_dispatch（手动输入 tag）
+      TAG_NAME: ${{ github.event.inputs.tag || github.ref_name }}
     steps:
-      #签出代码（默认使用触发事件的 ref，即被推送的 tag）
+      # 签出代码至目标 tag——两种触发方式都命中同一份代码
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG_NAME }}
 
       #APK签名设置
       - name: Download Android keystore
@@ -114,20 +125,18 @@ jobs:
             simple_live_app/build/dist/*/*.dmg
             simple_live_app/build/dist/*/*.zip
 
-      #获取版本信息（自动从 Git Tag 提取）
-      - name: Get version from tag
-        id: version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-      - name: Echo version
-        run: echo "${{ steps.version.outputs.VERSION }}"
+      # 打印目标 tag 便于排错
+      - name: Echo target tag
+        run: echo "TAG_NAME=${{ env.TAG_NAME }}"
 
       #上传至Release
       - name: Upload Release
         uses: softprops/action-gh-release@v1
         with:
-          name: "${{ steps.version.outputs.VERSION }}"
+          tag_name: ${{ env.TAG_NAME }}
+          name: ${{ env.TAG_NAME }}
           generate_release_notes: true
-          prerelease: ${{ contains(github.ref, 'beta') || contains(github.ref, 'alpha') }}
+          prerelease: ${{ contains(env.TAG_NAME, 'beta') || contains(env.TAG_NAME, 'alpha') }}
           token: ${{ secrets.TOKEN }}
           files: |
             simple_live_app/build/app/outputs/flutter-apk/app-x86_64-release.apk
@@ -144,9 +153,13 @@ jobs:
     runs-on: ubuntu-22.04
     permissions:
       contents: write
+    env:
+      TAG_NAME: ${{ github.event.inputs.tag || github.ref_name }}
     steps:
-      # 签出代码（默认使用触发事件的 ref，即被推送的 tag）
+      # 签出代码至目标 tag
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG_NAME }}
       # 设置Flutter环境
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -183,20 +196,18 @@ jobs:
             simple_live_app/build/dist/*/*.deb
             simple_live_app/build/dist/*/*.zip
 
-      #获取版本信息（自动从 Git Tag 提取）
-      - name: Get version from tag
-        id: version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-      - name: Echo version
-        run: echo "${{ steps.version.outputs.VERSION }}"
+      # 打印目标 tag 便于排错
+      - name: Echo target tag
+        run: echo "TAG_NAME=${{ env.TAG_NAME }}"
 
       #上传至Release
       - name: Upload Release
         uses: softprops/action-gh-release@v1
         with:
-          name: "${{ steps.version.outputs.VERSION }}"
+          tag_name: ${{ env.TAG_NAME }}
+          name: ${{ env.TAG_NAME }}
           generate_release_notes: true
-          prerelease: ${{ contains(github.ref, 'beta') || contains(github.ref, 'alpha') }}
+          prerelease: ${{ contains(env.TAG_NAME, 'beta') || contains(env.TAG_NAME, 'alpha') }}
           token: ${{ secrets.TOKEN }}
           files: |
             simple_live_app/build/dist/*/*.deb
@@ -209,9 +220,13 @@ jobs:
     runs-on: windows-latest
     permissions:
       contents: write
+    env:
+      TAG_NAME: ${{ github.event.inputs.tag || github.ref_name }}
     steps:
-      # 签出代码（默认使用触发事件的 ref，即被推送的 tag）
+      # 签出代码至目标 tag
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG_NAME }}
       # 设置Flutter环境
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -242,21 +257,19 @@ jobs:
             simple_live_app/build/dist/*/*.msix
             simple_live_app/build/dist/*/*.zip
 
-      #获取版本信息（自动从 Git Tag 提取）
-      - name: Get version from tag
-        id: version
+      # 打印目标 tag 便于排错
+      - name: Echo target tag
         shell: bash
-        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-      - name: Echo version
-        run: echo "${{ steps.version.outputs.VERSION }}"
+        run: echo "TAG_NAME=${{ env.TAG_NAME }}"
 
       #上传至Release
       - name: Upload Release
         uses: softprops/action-gh-release@v1
         with:
-          name: "${{ steps.version.outputs.VERSION }}"
+          tag_name: ${{ env.TAG_NAME }}
+          name: ${{ env.TAG_NAME }}
           generate_release_notes: true
-          prerelease: ${{ contains(github.ref, 'beta') || contains(github.ref, 'alpha') }}
+          prerelease: ${{ contains(env.TAG_NAME, 'beta') || contains(env.TAG_NAME, 'alpha') }}
           token: ${{ secrets.TOKEN }}
           files: |
             simple_live_app/build/dist/*/*.msix
