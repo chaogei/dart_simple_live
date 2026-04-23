@@ -10,10 +10,8 @@ jobs:
     permissions:
       contents: write
     steps:
-      #签出代码
+      #签出代码（默认使用触发事件的 ref，即被推送的 tag）
       - uses: actions/checkout@v4
-        with:
-          ref: master
 
       #APK签名设置
       - name: Download Android keystore
@@ -147,10 +145,8 @@ jobs:
     permissions:
       contents: write
     steps:
-      # 签出代码
+      # 签出代码（默认使用触发事件的 ref，即被推送的 tag）
       - uses: actions/checkout@v4
-        with:
-          ref: master
       # 设置Flutter环境
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -214,10 +210,8 @@ jobs:
     permissions:
       contents: write
     steps:
-      # 签出代码
+      # 签出代码（默认使用触发事件的 ref，即被推送的 tag）
       - uses: actions/checkout@v4
-        with:
-          ref: master
       # 设置Flutter环境
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
