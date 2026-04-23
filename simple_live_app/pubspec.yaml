@@ -58,7 +58,10 @@ dependencies:
   window_manager: ^0.5.1 #窗口管理
   floating: ^6.0.0 #PIP画中画
   flutter_inappwebview: ^6.1.5 #WebView
-  connectivity_plus: ^7.0.0 #网络状态
+  # 锁 6.x：7.1.x 直接调用 iOS 26 才有的 NWPath.isUltraConstrained，
+  # 需要 Xcode 26 SDK 才能编译；GitHub Actions macos-15 runner 目前仅有 Xcode 16.x。
+  # 本仓仅用 checkConnectivity()/ConnectivityResult.mobile，6.x/7.x API 行为等价。
+  connectivity_plus: ^6.1.5 #网络状态
   qr_code_scanner_plus: ^2.0.14 #二维码扫描
   volume_controller: ^3.4.0 #音量控制
 
